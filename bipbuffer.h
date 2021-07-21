@@ -14,6 +14,9 @@ typedef struct
     /* is B inuse? */
     int b_inuse;
 
+    /* is someone writing data? */
+    int reserved_lock;
+
     unsigned char data[];
 } bipbuf_t;
 
@@ -36,6 +39,23 @@ void bipbuf_init(bipbuf_t* me, const unsigned int size);
 /**
  * Free the bip buffer */
 void bipbuf_free(bipbuf_t *me);
+
+/**
+ * Reserve a region for incoming writes
+ *
+ * @param[in] size Number of bytes to reserve
+ * @return pointer to start of reserved region, or NULL if reservation failed
+ *  */
+unsigned char *bipbuf_reserve(bipbuf_t* me, const int size);
+
+/**
+ * Tell buffer we have finished writing size bytes to the
+ * previously reserved region.
+ *
+ * @param[in] size Number of bytes written
+ * @return number of bytes committed
+ *  */
+int bipbuf_commit(bipbuf_t* me, const int size);
 
 /**
  * @param[in] data The data to be offered to the buffer

@@ -73,25 +73,55 @@ static void __check_for_switch_to_b(bipbuf_t* me)
         me->b_inuse = 1;
 }
 
-int bipbuf_offer(bipbuf_t* me, const unsigned char *data, const int size)
+unsigned char *bipbuf_reserve(bipbuf_t* me, const int size)
 {
     /* not enough space */
     if (bipbuf_unused(me) < size)
-        return 0;
+        return NULL;
+
+    /* already reserved */
+    if (me->reserved_lock)
+        return NULL;
+
+    me->reserved_lock = 1;
 
     if (1 == me->b_inuse)
     {
-        memcpy(me->data + me->b_end, data, size);
-        me->b_end += size;
+        return me->data + me->b_end;
     }
     else
     {
-        memcpy(me->data + me->a_end, data, size);
-        me->a_end += size;
+        return me->data + me->a_end;
     }
+}
+
+int bipbuf_commit(bipbuf_t* me, const int size)
+{
+    if (0 == me->reserved_lock)
+        /* Can't commit before reserve */
+        return 0;
+
+    if (1 == me->b_inuse)
+        me->b_end += size;
+    else
+        me->a_end += size;
 
     __check_for_switch_to_b(me);
+
+    me->reserved_lock = 0;
     return size;
+}
+
+int bipbuf_offer(bipbuf_t* me, const unsigned char *data, const int size)
+{
+    unsigned char* data_start = bipbuf_reserve(me, size);
+
+    if (0 == data_start)
+        return 0;
+
+    memcpy(data_start, data, size);
+
+    return bipbuf_commit(me, size);
 }
 
 unsigned char *bipbuf_peek(const bipbuf_t* me, const unsigned int size)

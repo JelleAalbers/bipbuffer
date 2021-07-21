@@ -62,6 +62,31 @@ void Txestbipbuffer_cant_offer_if_full(CuTest * tc)
     CuAssertTrue(tc, 0 == bipbuf_offer(cb, (unsigned char*)"1000", 4));
 }
 
+
+void Testbipbuffer_reserve_commit(CuTest * tc)
+{
+    void *cb;
+
+    cb = bipbuf_new(16);
+
+    /* Cannot commit without reserving */
+    CuAssertTrue(tc, 0 == bipbuf_commit(cb, 4));
+
+    unsigned char *data_start = bipbuf_reserve(cb, 4);
+
+    /* Cannot reserve twice in a row */
+    CuAssertTrue(tc, NULL == bipbuf_reserve(cb, 4));
+
+    memcpy(data_start, (unsigned char*)"1234", 4);
+
+    /* Will not read data until committed */
+    CuAssertTrue(tc, NULL == bipbuf_poll(cb, 4));
+
+    /* Commit and read back the data */
+    CuAssertTrue(tc, 4 == bipbuf_commit(cb, 4));
+    CuAssertTrue(tc, 0 == strncmp("1234", (char*)bipbuf_poll(cb, 4), 4));
+}
+
 void Testbipbuffer_offer_and_poll(CuTest * tc)
 {
     void *cb;
